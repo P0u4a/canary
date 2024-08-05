@@ -3,10 +3,8 @@ package api
 import (
 	"encoding/json"
 	"net/http"
-)
-
-const (
-	SIMILARITY_THRESHOLD = 0.98
+	"os"
+	"strconv"
 )
 
 func HandleSignUp(db *DB) http.HandlerFunc {
@@ -49,20 +47,27 @@ func HandleSignIn(db *DB) http.HandlerFunc {
 		userData, ok := db.Get(req.Username)
 		if !ok {
 			http.Error(w, "User does not exist", http.StatusUnauthorized)
+			return
 		}
 
-		transcribedPass, similarityScore, err := getTranscribedPassAndSimScore(userData)
+		transcribedPass, similarityScore, err := getTranscribedPassAndSimScore(userData.VoiceData, req.VoiceData)
 		if err != nil {
 			http.Error(w, "Error retrieving voice data", http.StatusInternalServerError)
 			return
 		}
 
-		if similarityScore < SIMILARITY_THRESHOLD || transcribedPass != userData.Passphrase {
+		similarityThreshold, err := strconv.ParseFloat(os.Getenv("SIMILARITY_THRESHOLD"), 64)
+		if err != nil {
+			http.Error(w, "Interal Server Error", http.StatusInternalServerError)
+			return
+		}
+
+		if similarityScore < similarityThreshold || transcribedPass != userData.Passphrase {
 			http.Error(w, "Sign in failed", http.StatusUnauthorized)
 			return
 		}
 
-		accessToken, refreshToken, err := createTokenPair(req.Username)
+		accessToken, refreshToken, err := createTokenPair()
 		if err != nil {
 			http.Error(w, "Failed to generate token pair", http.StatusInternalServerError)
 		}
@@ -97,7 +102,7 @@ func HandleRefresh(db *DB) http.HandlerFunc {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		accessToken, err := regenerateJWT(username["username"])
+		accessToken, err := regenerateJWT()
 		if err != nil {
 			http.Error(w, "Failed to generate refresh token", http.StatusInternalServerError)
 		}
@@ -116,17 +121,11 @@ func HandleProtected(db *DB) http.HandlerFunc {
 
 		authHeader := r.Header.Get("x-access-token")
 
-		token, err := validateJWT(authHeader)
+		_, err := validateJWT(authHeader)
 		if err != nil {
 			w.WriteHeader(http.StatusForbidden)
 			return
 		}
-		if !token.Valid {
-			w.WriteHeader(http.StatusForbidden)
-			return
-		}
-
-		// TODO Also check the audience is correct
 
 		w.WriteHeader(http.StatusAccepted)
 	}

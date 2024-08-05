@@ -12,8 +12,8 @@ import (
 )
 
 const (
-	FEATURES_ENDPOINT   = "localhost:3001/process-voice"
-	TRANSCRIBE_ENDPOINT = "localhost:3001/analyse-voice"
+	FEATURES_ENDPOINT   = "http://localhost:3001/process-voice"
+	TRANSCRIBE_ENDPOINT = "http://localhost:3001/analyse-voice"
 )
 
 func getFeaturesAndPassphrase(voiceData []byte) ([]float64, string, error) {
@@ -42,8 +42,8 @@ func getFeaturesAndPassphrase(voiceData []byte) ([]float64, string, error) {
 
 }
 
-func getTranscribedPassAndSimScore(userData User) (string, float64, error) {
-	payload := map[string]User{"data": userData}
+func getTranscribedPassAndSimScore(savedVoiceData []float64, inputVoiceData []byte) (string, float64, error) {
+	payload := map[string]interface{}{"savedVoiceData": savedVoiceData, "inputVoiceData": inputVoiceData}
 	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
 		return "", 0.0, err
@@ -67,15 +67,13 @@ func getTranscribedPassAndSimScore(userData User) (string, float64, error) {
 	return transcribedPassAndSimScore.TranscribedPass, transcribedPassAndSimScore.SimilarityScore, nil
 }
 
-func createTokenPair(username string) (string, string, error) {
+func createTokenPair() (string, string, error) {
 	accessTokenClaims := jwt.MapClaims{
-		"Audience":  username,
-		"ExpiresAt": time.Now().Add(time.Hour * 1).Unix(),
+		"exp": time.Now().Add(time.Hour * 1).Unix(),
 	}
 
 	refreshTokenClaims := jwt.MapClaims{
-		"Audience":  username,
-		"ExpiresAt": time.Now().Add(time.Hour * 24).Unix(),
+		"exp": time.Now().Add(time.Hour * 24).Unix(),
 	}
 
 	secret := os.Getenv("JWT_SECRET")
@@ -95,12 +93,9 @@ func createTokenPair(username string) (string, string, error) {
 	return accessString, refreshString, nil
 }
 
-func regenerateJWT(username string) (string, error) {
-	// verify user exists first
-
+func regenerateJWT() (string, error) {
 	accessTokenClaims := jwt.MapClaims{
-		"Audience":  username,
-		"ExpiresAt": time.Now().Add(time.Hour * 24).Unix(),
+		"exp": time.Now().Add(time.Hour * 1).Unix(),
 	}
 
 	secret := os.Getenv("JWT_SECRET")
@@ -114,14 +109,38 @@ func regenerateJWT(username string) (string, error) {
 	return accessString, nil
 }
 
-func validateJWT(token string) (*jwt.Token, error) {
+func validateJWT(tokenString string) (*jwt.Token, error) {
 	secret := os.Getenv("JWT_SECRET")
 
-	return jwt.Parse(token, func(t *jwt.Token) (interface{}, error) {
+	token, err := jwt.Parse(tokenString, func(t *jwt.Token) (interface{}, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
 		}
 
 		return []byte(secret), nil
 	})
+	if err != nil {
+		return nil, err
+	}
+
+	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+		if err := validateClaims(claims); err != nil {
+			return nil, err
+		}
+	} else {
+		return nil, fmt.Errorf("invalid token claims")
+	}
+
+	return token, nil
+
+}
+
+func validateClaims(claims jwt.MapClaims) error {
+	if exp, ok := claims["exp"].(float64); ok {
+		if int64(exp) < time.Now().Unix() {
+			return fmt.Errorf("token has expired")
+		}
+	}
+
+	return nil
 }

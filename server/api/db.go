@@ -5,8 +5,8 @@ import (
 )
 
 type User struct {
-	VoiceFeatures []float64
-	Passphrase    string
+	VoiceData  []float64
+	Passphrase string
 }
 
 type DB struct {
