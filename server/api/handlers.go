@@ -27,6 +27,18 @@ func HandleSignUp(db *DB) http.HandlerFunc {
 		}
 
 		db.Set(req.Username, User{features, passphrase})
+
+		accessToken, refreshToken, err := createTokenPair()
+		if err != nil {
+			http.Error(w, "Failed to generate token pair", http.StatusInternalServerError)
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		res := AuthResponse{AccessToken: accessToken, RefreshToken: refreshToken}
+		if err := json.NewEncoder(w).Encode(res); err != nil {
+			http.Error(w, "Failed to encode JSON", http.StatusInternalServerError)
+			return
+		}
 	}
 
 }
