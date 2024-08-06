@@ -4,11 +4,6 @@ import (
 	"sync"
 )
 
-type User struct {
-	VoiceData  []float64
-	Passphrase string
-}
-
 type DB struct {
 	data sync.Map
 }

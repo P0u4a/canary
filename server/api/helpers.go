@@ -16,55 +16,50 @@ const (
 	TRANSCRIBE_ENDPOINT = "http://localhost:3001/analyse-voice"
 )
 
-func getFeaturesAndPassphrase(voiceData []byte) ([]float64, string, error) {
-	payload := map[string][]byte{"data": voiceData}
+func initModel(username string, voiceData []byte) error {
+	payload := map[string]interface{}{"voicedata": voiceData, "username": username}
 	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
-		return nil, "", err
+		return err
 	}
 
 	res, err := http.Post(FEATURES_ENDPOINT, "application/json", bytes.NewBuffer(payloadBytes))
 	if err != nil {
-		return nil, "", err
+		return err
 	}
 	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusOK {
-		return nil, "", fmt.Errorf("unexpected status code: %d", res.StatusCode)
+		return fmt.Errorf("unexpected status code: %d", res.StatusCode)
 	}
 
-	var featuresAndPassphrase CanarySignUpResponse
-	if err := json.NewDecoder(res.Body).Decode(&featuresAndPassphrase); err != nil {
-		return nil, "", err
-	}
-
-	return featuresAndPassphrase.Features, featuresAndPassphrase.Passphrase, nil
+	return nil
 
 }
 
-func getTranscribedPassAndSimScore(savedVoiceData []float64, inputVoiceData []byte) (string, float64, error) {
-	payload := map[string]interface{}{"savedVoiceData": savedVoiceData, "inputVoiceData": inputVoiceData}
+func verifyVoice(username string, voiceData []byte) (bool, error) {
+	payload := map[string]interface{}{"voicedata": voiceData, "username": username}
 	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
-		return "", 0.0, err
+		return false, err
 	}
 
 	res, err := http.Post(TRANSCRIBE_ENDPOINT, "application/json", bytes.NewBuffer(payloadBytes))
 	if err != nil {
-		return "", 0.0, err
+		return false, err
 	}
 	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusOK {
-		return "", 0.0, fmt.Errorf("unexpected status code: %d", res.StatusCode)
+		return false, fmt.Errorf("unexpected status code: %d", res.StatusCode)
 	}
 
-	var transcribedPassAndSimScore CanarySignInResponse
-	if err := json.NewDecoder(res.Body).Decode(&transcribedPassAndSimScore); err != nil {
-		return "", 0.0, err
+	var status CanarySignInResponse
+	if err := json.NewDecoder(res.Body).Decode(&status); err != nil {
+		return false, err
 	}
 
-	return transcribedPassAndSimScore.TranscribedPass, transcribedPassAndSimScore.SimilarityScore, nil
+	return status.Verified, nil
 }
 
 func createTokenPair() (string, string, error) {

@@ -1,5 +1,10 @@
 package api
 
+type User struct {
+	Username string `json:"username"`
+	Role     string `json:"role"`
+}
+
 type AuthRequest struct {
 	Username  string `json:"username"`
 	VoiceData []byte `json:"voicedata"`
@@ -10,12 +15,6 @@ type AuthResponse struct {
 	RefreshToken string `json:"refreshtoken"`
 }
 
-type CanarySignUpResponse struct {
-	Features   []float64 `json:"features"`
-	Passphrase string    `json:"passphrase"`
-}
-
 type CanarySignInResponse struct {
-	SimilarityScore float64 `json:"similarityScore"`
-	TranscribedPass string  `json:"transcribedPass"`
+	Verified bool `json:"verified"`
 }

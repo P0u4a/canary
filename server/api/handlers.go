@@ -3,8 +3,6 @@ package api
 import (
 	"encoding/json"
 	"net/http"
-	"os"
-	"strconv"
 )
 
 func HandleSignUp(db *DB) http.HandlerFunc {
@@ -20,13 +18,13 @@ func HandleSignUp(db *DB) http.HandlerFunc {
 			return
 		}
 
-		features, passphrase, err := getFeaturesAndPassphrase(req.VoiceData)
+		err := initModel(req.Username, req.VoiceData)
 		if err != nil {
 			http.Error(w, "Error handling voice data", http.StatusInternalServerError)
 			return
 		}
 
-		db.Set(req.Username, User{features, passphrase})
+		db.Set(req.Username, User{req.Username, "test"})
 
 		accessToken, refreshToken, err := createTokenPair()
 		if err != nil {
@@ -56,25 +54,19 @@ func HandleSignIn(db *DB) http.HandlerFunc {
 			return
 		}
 
-		userData, ok := db.Get(req.Username)
+		_, ok := db.Get(req.Username)
 		if !ok {
 			http.Error(w, "User does not exist", http.StatusUnauthorized)
 			return
 		}
 
-		transcribedPass, similarityScore, err := getTranscribedPassAndSimScore(userData.VoiceData, req.VoiceData)
+		verified, err := verifyVoice(req.Username, req.VoiceData)
 		if err != nil {
-			http.Error(w, "Error retrieving voice data", http.StatusInternalServerError)
+			http.Error(w, "Error verifying voice data", http.StatusInternalServerError)
 			return
 		}
 
-		similarityThreshold, err := strconv.ParseFloat(os.Getenv("SIMILARITY_THRESHOLD"), 64)
-		if err != nil {
-			http.Error(w, "Interal Server Error", http.StatusInternalServerError)
-			return
-		}
-
-		if similarityScore < similarityThreshold || transcribedPass != userData.Passphrase {
+		if !verified {
 			http.Error(w, "Sign in failed", http.StatusUnauthorized)
 			return
 		}
