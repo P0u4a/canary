@@ -5,11 +5,6 @@ type User struct {
 	Role     string `json:"role"`
 }
 
-type AuthRequest struct {
-	Username  string `json:"username"`
-	VoiceData []byte `json:"voicedata"`
-}
-
 type AuthResponse struct {
 	AccessToken  string `json:"accesstoken"`
 	RefreshToken string `json:"refreshtoken"`

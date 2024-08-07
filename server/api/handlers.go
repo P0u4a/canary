@@ -12,19 +12,29 @@ func HandleSignUp(db *DB) http.HandlerFunc {
 			return
 		}
 
-		var req AuthRequest
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			http.Error(w, "Error parsing JSON", http.StatusBadRequest)
+		// 10 MB limit on file size
+		err := r.ParseMultipartForm(10 << 20)
+		if err != nil {
+			http.Error(w, "Unable to parse form", http.StatusBadRequest)
 			return
 		}
 
-		err := initModel(req.Username, req.VoiceData)
+		audioFile, _, err := r.FormFile("voicedata")
+		if err != nil {
+			http.Error(w, "Error retrieving file", http.StatusBadRequest)
+			return
+		}
+		defer audioFile.Close()
+
+		username := r.FormValue("username")
+
+		err = initModel(username, audioFile)
 		if err != nil {
 			http.Error(w, "Error handling voice data", http.StatusInternalServerError)
 			return
 		}
 
-		db.Set(req.Username, User{req.Username, "test"})
+		db.Set(username, User{username, "member"})
 
 		accessToken, refreshToken, err := createTokenPair()
 		if err != nil {
@@ -48,19 +58,29 @@ func HandleSignIn(db *DB) http.HandlerFunc {
 			return
 		}
 
-		var req AuthRequest
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			http.Error(w, "Error parsing JSON", http.StatusBadRequest)
+		err := r.ParseMultipartForm(10 << 20)
+		if err != nil {
+			http.Error(w, "Unable to parse form", http.StatusBadRequest)
 			return
 		}
 
-		_, ok := db.Get(req.Username)
+		audioFile, _, err := r.FormFile("voicedata")
+		if err != nil {
+			http.Error(w, "Error retrieving file", http.StatusBadRequest)
+			return
+		}
+		defer audioFile.Close()
+
+		// Retrieve the username from the form data
+		username := r.FormValue("username")
+
+		_, ok := db.Get(username)
 		if !ok {
 			http.Error(w, "User does not exist", http.StatusUnauthorized)
 			return
 		}
 
-		verified, err := verifyVoice(req.Username, req.VoiceData)
+		verified, err := verifyVoice(username, audioFile)
 		if err != nil {
 			http.Error(w, "Error verifying voice data", http.StatusInternalServerError)
 			return
