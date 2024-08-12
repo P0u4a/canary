@@ -1,34 +1,66 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, session
+from flask_session import Session
+import threading
 import canary
-import io
+from utils import cleanup
+
+
+SESSION_TYPE = 'filesystem'
+TEMP_FILE_NAME = 'audio.wav'
+
+# -16000 is the value arrived at by doing some tests against positive and negative voice matches
+# In future iterations a more robust calculation should be used
+SIMILARITY_THRESHOLD = -16000
 
 app = Flask(__name__)
-
-# TODO Replace with a thread-safe data structure
-user_to_model = {}
+app.config.from_object(__name__)
+Session(app)
 
 @app.route('/process-voice', methods=['POST'])
 def process_voice():
-    voicedata = request.json.get('voicedata')
-    username = request.json.get('username')
-    new_user_model = canary.train_model(voicedata)
+    voice_data = request.files['voicedata']
+    username = request.form.get('username')
 
-    user_to_model[username] = new_user_model
+    audio_bytes = voice_data.read()
+    with open(TEMP_FILE_NAME, 'wb') as f:
+        f.write(audio_bytes)
 
-    # TODO add error handling
-    return jsonify({'message': 'User model initialised'}), 200
+    try:
+        new_user_model = canary.train_model(TEMP_FILE_NAME)
+    except Exception as e:
+        threading.Thread(target=cleanup, args=(TEMP_FILE_NAME,)).start()
+        return jsonify({'message': e}), 500
+
+    if 'user_to_model' not in session:
+        session['user_to_model'] = {}
+    
+    session['user_to_model'][username] = new_user_model
+
+    threading.Thread(target=cleanup, args=(TEMP_FILE_NAME,)).start()
+
+    return jsonify({'message': 'initialised user model'}), 200
 
 
 @app.route('/analyse-voice', methods=['POST'])
 def analyse_voice():
-    voicedata = request.json.get('voicedata')
-    username = request.json.get('username')
+    voice_data = request.files['voicedata']
+    username = request.form.get('username')
 
-    user_model = user_to_model[username]
+    user_model = session['user_to_model'][username]
 
-    similarity_score = canary.get_similarity(user_model, voicedata)
+    audio_bytes = voice_data.read()
+    with open(TEMP_FILE_NAME, 'wb') as f:
+        f.write(audio_bytes)
 
-    status = similarity_score < -16000
+    try:
+        similarity_score = canary.get_similarity(user_model, TEMP_FILE_NAME)
+    except Exception as e:
+        threading.Thread(target=cleanup, args=(TEMP_FILE_NAME,)).start()
+        return jsonify({'message': e}), 500
+
+    threading.Thread(target=cleanup, args=(TEMP_FILE_NAME,)).start()
+
+    status = similarity_score < SIMILARITY_THRESHOLD
 
     return jsonify({'verified': status}), 200
 

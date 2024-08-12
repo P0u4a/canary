@@ -6,9 +6,10 @@ def extract_features(audio_file, fs=16000, wst=0.02, fpt=0.01, nbands=40, ncomp=
     # y: Speech signal, sr: Sampling rate
     y, sr = librosa.load(audio_file, sr=fs)
 
-    # Calculate parameters
-    nfft = int(wst * fs)  # Window size in samples
-    fp = int(fpt * fs)    # Frame period in samples
+    # Window size in samples
+    nfft = int(wst * fs) 
+    # Frame period in samples
+    fp = int(fpt * fs)    
 
     # Extract MFCC features
     mfcc = librosa.feature.mfcc(y=y, sr=sr, n_fft=nfft, hop_length=fp, n_mels=nbands, n_mfcc=ncomp).T

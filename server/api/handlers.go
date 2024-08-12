@@ -152,5 +152,6 @@ func HandleProtected(db *DB) http.HandlerFunc {
 		}
 
 		w.WriteHeader(http.StatusAccepted)
+		w.Write([]byte("Wow, you have access to this page!"))
 	}
 }
