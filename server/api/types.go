@@ -2,7 +2,6 @@ package api
 
 type User struct {
 	Username string `json:"username"`
-	Role     string `json:"role"`
 }
 
 type AuthResponse struct {
@@ -11,5 +10,5 @@ type AuthResponse struct {
 }
 
 type CanarySignInResponse struct {
-	Verified bool `json:"verified"`
+	Verified int32 `json:"verified"`
 }

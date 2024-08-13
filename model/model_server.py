@@ -1,22 +1,22 @@
-from flask import Flask, request, jsonify, session
-from flask_session import Session
+from flask import Flask, request, jsonify
 import threading
 import canary
 from utils import cleanup
 
 
-SESSION_TYPE = 'filesystem'
-TEMP_FILE_NAME = 'audio.wav'
 
 # -16000 is the value arrived at by doing some tests against positive and negative voice matches
 # In future iterations a more robust calculation should be used
 SIMILARITY_THRESHOLD = -16000
+TEMP_FILE_NAME = 'audio.wav'
+SESSION_TYPE = 'filesystem'
 
 app = Flask(__name__)
 app.config.from_object(__name__)
-Session(app)
 
-@app.route('/process-voice', methods=['POST'])
+user_to_model = {}
+
+@app.route('/init-model', methods=['POST'])
 def process_voice():
     voice_data = request.files['voicedata']
     username = request.form.get('username')
@@ -30,23 +30,20 @@ def process_voice():
     except Exception as e:
         threading.Thread(target=cleanup, args=(TEMP_FILE_NAME,)).start()
         return jsonify({'message': e}), 500
-
-    if 'user_to_model' not in session:
-        session['user_to_model'] = {}
     
-    session['user_to_model'][username] = new_user_model
+    user_to_model[username] = new_user_model
 
     threading.Thread(target=cleanup, args=(TEMP_FILE_NAME,)).start()
 
     return jsonify({'message': 'initialised user model'}), 200
 
 
-@app.route('/analyse-voice', methods=['POST'])
+@app.route('/verify-voice', methods=['POST'])
 def analyse_voice():
     voice_data = request.files['voicedata']
     username = request.form.get('username')
 
-    user_model = session['user_to_model'][username]
+    user_model = user_to_model[username]
 
     audio_bytes = voice_data.read()
     with open(TEMP_FILE_NAME, 'wb') as f:
@@ -60,7 +57,7 @@ def analyse_voice():
 
     threading.Thread(target=cleanup, args=(TEMP_FILE_NAME,)).start()
 
-    status = similarity_score < SIMILARITY_THRESHOLD
+    status = 1 if similarity_score < SIMILARITY_THRESHOLD else 0
 
     return jsonify({'verified': status}), 200
 

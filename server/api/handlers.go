@@ -27,7 +27,6 @@ func HandleSignUp(db *DB) http.HandlerFunc {
 		defer audioFile.Close()
 
 		username := r.FormValue("username")
-		role := r.FormValue("role")
 
 		err = initModel(username, audioFile)
 		if err != nil {
@@ -35,19 +34,9 @@ func HandleSignUp(db *DB) http.HandlerFunc {
 			return
 		}
 
-		db.Set(username, User{username, role})
+		db.Set(username, User{username})
 
-		accessToken, refreshToken, err := createTokenPair()
-		if err != nil {
-			http.Error(w, "Failed to generate token pair", http.StatusInternalServerError)
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		res := AuthResponse{AccessToken: accessToken, RefreshToken: refreshToken}
-		if err := json.NewEncoder(w).Encode(res); err != nil {
-			http.Error(w, "Failed to encode JSON", http.StatusInternalServerError)
-			return
-		}
+		w.WriteHeader(http.StatusCreated)
 	}
 
 }
@@ -87,7 +76,7 @@ func HandleSignIn(db *DB) http.HandlerFunc {
 			return
 		}
 
-		if !verified {
+		if verified != 1 {
 			http.Error(w, "Sign in failed", http.StatusUnauthorized)
 			return
 		}

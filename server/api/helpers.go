@@ -14,8 +14,8 @@ import (
 )
 
 const (
-	SIGN_UP_ENDPOINT = "http://localhost:3001/process-voice"
-	SIGN_IN_ENDPOINT = "http://localhost:3001/analyse-voice"
+	SIGN_UP_ENDPOINT = "http://localhost:3001/init-model"
+	SIGN_IN_ENDPOINT = "http://localhost:3001/verify-voice"
 )
 
 func sendMultipartReq(username string, voiceData multipart.File, endpoint string) (*http.Response, error) {
@@ -75,21 +75,21 @@ func initModel(username string, voiceData multipart.File) error {
 
 }
 
-func verifyVoice(username string, voiceData multipart.File) (bool, error) {
+func verifyVoice(username string, voiceData multipart.File) (int32, error) {
 
 	res, err := sendMultipartReq(username, voiceData, SIGN_IN_ENDPOINT)
 	if err != nil {
-		return false, err
+		return 0, err
 	}
 	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusOK {
-		return false, fmt.Errorf("unexpected status code: %d", res.StatusCode)
+		return 0, fmt.Errorf("unexpected status code: %d", res.StatusCode)
 	}
 
 	var status CanarySignInResponse
 	if err := json.NewDecoder(res.Body).Decode(&status); err != nil {
-		return false, err
+		return 0, err
 	}
 
 	return status.Verified, nil
