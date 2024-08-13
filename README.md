@@ -2,7 +2,7 @@
 
 Biometric authentication protocol using your voice.
 
-> 🚧 Please do not use this for anything real. It's just a fun little experiment.
+> 🚧 Not meant for use in production
 
 ## Design
 

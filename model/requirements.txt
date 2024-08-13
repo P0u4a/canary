@@ -7,7 +7,6 @@ charset-normalizer==3.3.2
 click==8.1.7
 decorator==5.1.1
 Flask==3.0.3
-Flask-Session==0.8.0
 idna==3.7
 itsdangerous==2.2.0
 Jinja2==3.1.4
