@@ -27,6 +27,7 @@ func HandleSignUp(db *DB) http.HandlerFunc {
 		defer audioFile.Close()
 
 		username := r.FormValue("username")
+		role := r.FormValue("role")
 
 		err = initModel(username, audioFile)
 		if err != nil {
@@ -34,7 +35,7 @@ func HandleSignUp(db *DB) http.HandlerFunc {
 			return
 		}
 
-		db.Set(username, User{username, "member"})
+		db.Set(username, User{username, role})
 
 		accessToken, refreshToken, err := createTokenPair()
 		if err != nil {
