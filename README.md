@@ -19,6 +19,7 @@ Upon subsequent requests, the client will sent the access token in the Authoriza
 ## Limitations
 
 -   You'll have to say your passphrase out loud, problematic when in public
+-   Currently the model is only trained on a single voice sample, using more samples during sign up would yield more accurate results
 -   Probably will not work accuratley in noisy environments
 -   Voice data is not currrently encrypted when in transit from client to server
 -   It's possible to spoof the user's voice or get it close enough (relatively easy these days)
