@@ -61,7 +61,6 @@ func HandleSignIn(db *DB) http.HandlerFunc {
 		}
 		defer audioFile.Close()
 
-		// Retrieve the username from the form data
 		username := r.FormValue("username")
 
 		_, ok := db.Get(username)

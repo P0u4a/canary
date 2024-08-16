@@ -3,13 +3,13 @@ import threading
 import canary
 from utils import cleanup
 
-
-
-# -16000 is the value arrived at by doing some tests against positive and negative voice matches
-# In future iterations a more robust calculation should be used
+'''
+-16000 is the average value arrived at after performing tests on the model against 
+positive and negative voice matches. In future iterations a more robust 
+calculation should be used.
+'''
 SIMILARITY_THRESHOLD = -16000
 TEMP_FILE_NAME = 'audio.wav'
-SESSION_TYPE = 'filesystem'
 
 app = Flask(__name__)
 app.config.from_object(__name__)

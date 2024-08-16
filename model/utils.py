@@ -6,4 +6,3 @@ def cleanup(path):
         return None
     except Exception as e:
         return e
-    
