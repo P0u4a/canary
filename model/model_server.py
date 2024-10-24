@@ -56,8 +56,7 @@ def analyse_voice():
         return jsonify({'message': e}), 500
 
     threading.Thread(target=cleanup, args=(TEMP_FILE_NAME,)).start()
-
-    status = 1 if similarity_score < SIMILARITY_THRESHOLD else 0
+    status = 1 if similarity_score >= SIMILARITY_THRESHOLD else 0
 
     return jsonify({'verified': status}), 200
 
