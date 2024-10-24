@@ -132,9 +132,13 @@ func HandleProtected(db *DB) http.HandlerFunc {
 			return
 		}
 
-		authHeader := r.Header.Get("x-access-token")
+		// Parse the query parameters
+		queryParams := r.URL.Query()
 
-		_, err := validateJWT(authHeader)
+		// Get the token
+		token := queryParams.Get("accessToken")
+
+		_, err := validateJWT(token)
 		if err != nil {
 			w.WriteHeader(http.StatusForbidden)
 			return
